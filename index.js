@@ -1,6 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require("readline");
+let jsmediatags;
+try {
+    jsmediatags = require("jsmediatags");
+} catch(err) {
+    if(err.code !== 'MODULE_NOT_FOUND') {
+        console.warn(err);
+    }
+}
 
 const { exec } = require('child_process');
 
@@ -70,6 +78,44 @@ const displayHelp = (m) => {
 if(process.argv.length <= 2) {
     displayHelp('Too few arguments.')
 } else {
+    (async () => {
+    
+    const readTag = (file) => {
+        return new Promise((res, rej) => {
+            jsmediatags.read(file, {
+                onSuccess: res,
+                onError: rej
+            })
+        })
+    }
+    const writeTempImage = async (file) => {
+        try {
+            const fileTags = await readTag(file);
+            const tags = fileTags.tags;
+
+            if(!tags) {
+                return null;
+            }
+        
+            if(!tags.picture) {
+                return null;
+            }
+            let name = file.split('.')
+            name.pop();
+            name.push(tags.picture.format.split('/').slice(-1)[0]);
+            name = name.join('.').split('/').slice(-1)[0];
+            let tempDir = path.join(__dirname, 'temp');
+            let filePath = path.join(tempDir, name);
+
+            if(fs.existsSync(filePath)) return filePath;
+            if(!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+            fs.writeFileSync(filePath, Buffer.from(tags.picture.data));
+            
+            return filePath;
+        } catch(err) {
+            return null;
+        }
+    }
     let argsObj = {};
     process.argv.forEach((arg, i) => {
         let argument = arg.toLowerCase();
@@ -86,23 +132,35 @@ if(process.argv.length <= 2) {
             }
         }
     })
-    if(!argsObj.audioPath || !argsObj.imgPath) return displayHelp("No image or audio path provided.");
+    if(!argsObj.audioPath) return displayHelp("No audio path provided.");
     
     argsObj.audioFilter = argsObj.audioFilter || defaultAudioFilter;
 
     let ffmpegCmds;
     let parsedFilter = argsObj.audioFilter.match(isRegex) ? toRegex(argsObj.audioFilter) : new RegExp(`.*\\.(${argsObj.audioFilter.split(',').join('|')})`, 'gm');
     console.log(`Regex filter is: ${parsedFilter}`)
-    if(isDirectory(argsObj.audioPath)) ffmpegCmds = fs.readdirSync(argsObj.audioPath)
-        .filter(dirPath => (dirPath.match(parsedFilter) || [])[0] == dirPath)
-        .map(dirPath => 
-            genCommand(
-                argsObj.imgPath, 
-                path.join(argsObj.audioPath, dirPath), 
+    if(isDirectory(argsObj.audioPath)) {
+        ffmpegCmds = [];
+        let filteredFiles = fs.readdirSync(argsObj.audioPath)
+            .filter(dirPath => (dirPath.match(parsedFilter) || [])[0] == dirPath)
+        for(let dirPath of filteredFiles) {
+            let imgPath = argsObj.imgPath;
+            let audioPath = path.join(argsObj.audioPath, dirPath);
+            if(!imgPath) imgPath = await writeTempImage(audioPath);
+            if((imgPath === null) && (!argsObj.imgPath)) {
+                console.log(`${audioPath} has no image information and there is no imgPath provided as fallback, skipping.`)
+                continue;
+            }
+            ffmpegCmds.push(genCommand(
+                imgPath || argsObj.imgPath, 
+                audioPath, 
                 toMp4(dirPath)
-            )
-        )
-    else { 
+            ))
+        }
+    } else { 
+        if(!argsObj.imgPath) {
+            argsObj.imgPath = await writeTempImage(argsObj.audioPath);
+        }
         argsObj.outputPath = argsObj.outputPath || (toMp4(path.basename(argsObj.audioPath)))
         ffmpegCmds = [genCommand(argsObj.imgPath, argsObj.audioPath, argsObj.outputPath)]
         
@@ -134,4 +192,6 @@ if(process.argv.length <= 2) {
             process.exit();
         }
     })
+
+    })()
 }

@@ -3,3 +3,5 @@
 *.png
 *.jpg
 *.mp3
+/node_modules
+/temp

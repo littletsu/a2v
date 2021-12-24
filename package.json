@@ -1,0 +1,23 @@
+{
+  "name": "a2v",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/littletsu/a2v.git"
+  },
+  "keywords": [],
+  "author": "littletsu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/littletsu/a2v/issues"
+  },
+  "homepage": "https://github.com/littletsu/a2v#readme",
+  "optionalDependencies": {
+    "jsmediatags": "^3.9.7"
+  }
+}
