@@ -108,7 +108,7 @@ if(process.argv.length <= 2) {
             let filePath = path.join(tempDir, name);
 
             if(fs.existsSync(filePath)) return filePath;
-            if(!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+            if(!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
             fs.writeFileSync(filePath, Buffer.from(tags.picture.data));
             
             return filePath;
