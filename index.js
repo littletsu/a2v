@@ -57,7 +57,7 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
-const genCommand = (img, vid, out) => `ffmpeg -loop 1 -i "${img}" -i "${vid}" -c:v libx264 -tune stillimage -c:a copy -pix_fmt yuv420p -lossless 1 -strict -2 -shortest "${out}"`
+const genCommand = (img, vid, out) => `ffmpeg -y -loop 1 -i "${img}" -i "${vid}" -c:v libx264 -vf "crop=trunc(iw/2)*2:trunc(ih/2)*2" -tune stillimage -c:a copy -pix_fmt yuv420p -lossless 1 -strict -2 -shortest "${out}"`
 const isDirectory = (dirPath) => fs.existsSync(dirPath) && fs.lstatSync(dirPath).isDirectory();
 const isRegex = /\/.*\/.*/gm;
 const toRegex = (str) => {
